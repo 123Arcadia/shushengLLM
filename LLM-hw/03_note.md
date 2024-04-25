@@ -93,14 +93,97 @@ python3 -m huixiangdou.main --standalone # 单机运行
 
 ```
 
+### 进阶
+
+#### 加入网络搜索
+
+茴香豆除了可以从本地向量数据库中检索内容进行回答，也可以加入网络的搜索结果，生成回答。
+
+开启网络搜索功能需要用到 Serper 提供的 API：
+
+![img.png](../images/03_note_加入网络搜索.png)
+
+domain_partial_order 可以设置网络搜索的范围
+
+![img.png](../images/03_note_05.png)
 
 
+#### 使用远程模型
+
+茴香豆除了可以使用本地大模型，还可以轻松的调用云端模型 API。
+
+目前，茴香豆已经支持 Kimi，GPT-4，Deepseek 和 GLM 等常见大模型API。
+
+想要使用远端大模型，首先修改 /huixiangdou/config.ini 文件中
+
+![img.png](../images/03_note_远程模型.png)
+
+```python
+enable_local = 0 # 关闭本地模型
+enable_remote = 1 # 启用云端模型
+```
+
+修改 remote_ 相关配置，填写 API key、模型类型等参数:
+
+![img.png](../images/03_note_使用远程模型.png)
+
+启用远程模型可以大大降低GPU显存需求，根据测试，采用远程模型的茴香豆应用，最小只需要2G显存即可。
+
+需要注意的是，这里启用的远程模型，只用在问答分析和问题生成，依然需要本地嵌入、重排序模型进行特征提取。
+
+![img.png](../images/03_note_本地demo.png)
+
+#### 利用 Gradio 搭建网页 Demo
+
+用 Gradio 搭建一个自己的网页对话 Demo:
+
+安装依赖组件：
+
+`pip install gradio==4.25.0 redis==5.0.3 flask==3.0.2 lark_oapi==1.2.4`
+
+运行脚本，启动茴香豆对话 Demo 服务：
+
+`cd /root/huixiangdou`
+
+`python3 -m tests.test_query_gradio `
+
+运行：
+
+`浏览器中输入 127.0.0.1:7860浏览器中输入 127.0.0.1:7860`
+
+接收到请求 ：
+
+![img.png](../images/03_note_gradio.png)
+
+**针对远程服务器**，如我们的 Intern Studio 开发机，我们需要设置端口映射，转发端口到本地浏览器：
+
+查询开发机端口和密码（图中端口示例为 38374）：
 
 
+#### 配置文件解析
+
+茴香豆的配置文件位于代码主目录下，采用 Toml 形式，有着丰富的功能，下面将解析配置文件中重要的常用参数。
+
+```shell
+[feature_store]
+...
+reject_throttle = 0.22742061846268935
+...
+embedding_model_path = "/root/models/bce-embedding-base_v1"
+reranker_model_path = "/root/models/bce-reranker-base_v1"
+...
+work_dir = "workdir"
+```
+
+reject_throttle: 拒答阈值，0-1，数值越大，回答的问题相关性越高。拒答分数在检索过程中通过与示例问题的相似性检索得出，高质量的问题得分高，无关、低质量的问题得分低。只有得分数大于拒答阈值的才会被视为相关问题，用于回答的生成。当闲聊或无关问题较多的环境可以适当调高。 embedding_model_path 和 reranker_model_path: 嵌入和重排用到的模型路径。不设置本地模型路径情况下，默认自动通过 Huggingface 下载。开始自动下载前，需要使用下列命令登录 Huggingface 账户获取权限：
+
+`huggingface-cli login`
+
+`work_dir`: 向量数据库路径
+
+local_llm_path: 本地模型文件夹路径或模型名称。现支持 书生·浦语 和 通义千问 模型类型，调用 transformers 的 AutoModels 模块，除了模型路径，输入 Huggingface 上的模型名称，如*"internlm/internlm2-chat-7b"、"qwen/qwen-7b-chat-int8"、"internlm/internlm2-chat-20b"*，也可自动拉取模型文件。 local_llm_max_text_length: 模型可接受最大文本长度
 
 
+[worker]: 增强搜索功能，配合 [sg_search] 使用。增强搜索利用知识领域的源文件建立图数据库，当模型判断问题为无关问题或回答失败时，增强搜索功能将利用 LLM 提取的关键词在该图数据库中搜索，并尝试用搜索到的内容重新生成答案。在 config.ini 中查看 [sg_search] 具体配置示例。
 
-
-
-
-
+[worker.time]: 可以设置茴香豆每天的工作时间，通过 start 和 end 设定应答的起始和结束时间。 has_weekday: = 1 的时候，周末不应答
